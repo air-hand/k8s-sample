@@ -1,0 +1,15 @@
+---
+- name: enable some aliases in users configuration
+  ansible.builtin.template:
+    src: .bash_aliases.j2
+    dest: "/home/{{ item }}/.bash_aliases"
+  loop:
+    - vagrant
+
+- name: install bash-completion
+  ansible.builtin.apt:
+    state: present
+    update_cache: yes
+    name:
+      - bash-completion
+  become: true

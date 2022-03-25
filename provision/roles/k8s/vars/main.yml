@@ -1,0 +1,7 @@
+k8s_version: 1.23.1
+crio_version: 1.23
+
+libcontainers_url: "https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable/{{ ansible_distribution }}_{{ ansible_distribution_major_version }}"
+crio_url: "https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable:/cri-o:/{{ crio_version }}/{{ ansible_distribution }}_{{ ansible_distribution_major_version }}"
+
+crio_sock: /var/run/crio/crio.sock

@@ -1,0 +1,72 @@
+- block:
+  - name: create crio conf file
+    ansible.builtin.file:
+      state: touch
+      path: "{{ crio_conf_path }}"
+      modification_time: preserve
+      access_time: preserve
+
+  - name: concat modules as conf content
+    set_fact:
+      modules_joined: "{{ crio_modules | join('\n') }}"
+
+  - name: set up crio conf
+    ansible.builtin.copy:
+      dest: "{{ crio_conf_path }}"
+      content: |+
+        # ansible managed
+        {{ modules_joined }}
+
+  - name: load modules
+    community.general.modprobe:
+      name: "{{ item }}"
+      state: present
+    loop: "{{ crio_modules }}"
+
+  vars:
+    crio_conf_path: /etc/modules-load.d/crio.conf
+    crio_modules:
+      - overlay
+      - br_netfilter
+
+- name: set up sysctl params
+  ansible.posix.sysctl:
+    name: "{{ item.name }}"
+    value: "{{ item.value }}"
+    sysctl_file: /etc/sysctl.d/99-kubernetes-cri.conf
+    reload: yes
+  loop:
+    - { name: 'net.bridge.bridge-nf-call-iptables', value: '1'}
+    - { name: 'net.bridge.bridge-nf-call-ip6tables', value: '1'}
+    - { name: 'net.ipv4.ip_forward', value: '1'}
+
+- name: add apt keys
+  ansible.builtin.apt_key:
+    url: "{{ item }}"
+    keyring: /etc/apt/trusted.gpg.d/libcontainers.gpg
+  loop:
+    - "{{ libcontainers_url }}/Release.key"
+    - "{{ crio_url }}/Release.key"
+
+- name: add apt repositories
+  ansible.builtin.apt_repository:
+    repo: "deb [signed-by=/etc/apt/trusted.gpg.d/libcontainers.gpg] {{ item.repo }}"
+    state: present
+    filename: "{{ item.filename }}"
+  loop:
+    - { repo: "{{ libcontainers_url }}/ /", filename: kubic:libcontainers:stable }
+    - { repo: "{{ crio_url }}/ /", filename: kubic:libcontainers:stable:cri-o:stable }
+
+- name: install container packages
+  ansible.builtin.apt:
+    state: present
+    update_cache: yes
+    name:
+      - cri-o
+      - cri-o-runc
+
+- name: start container service
+  ansible.builtin.service:
+    name: crio
+    state: started
+    enabled: yes

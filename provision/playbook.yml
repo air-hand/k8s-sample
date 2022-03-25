@@ -1,0 +1,5 @@
+- hosts: 'all:!ansible-controller'
+  roles:
+    - system
+    - bash
+    - k8s

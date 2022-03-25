@@ -1,0 +1,4 @@
+# for ansible-controller
+ansible
+ansible-lint
+jmespath

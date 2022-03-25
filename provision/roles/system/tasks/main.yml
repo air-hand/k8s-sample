@@ -1,0 +1,41 @@
+---
+- block:
+  - name: update package cache
+    ansible.builtin.apt:
+      update_cache: yes
+
+  - name: install packages
+    ansible.builtin.apt:
+      state: present
+      update_cache: yes
+      name:
+        - apt-file
+        - apt-transport-https
+        - bash-completion
+        - ca-certificates
+        - curl
+        - jq
+        - net-tools
+        - firewalld
+        - python3
+        - python3-distutils
+        - python3-venv
+        - python3-firewall
+
+  - name: start firewalld
+    ansible.builtin.service:
+      name: firewalld
+      state: started
+      enabled: yes
+
+  - name: install venv for ansible
+    ansible.builtin.pip:
+      virtualenv_command: "python3 -m venv --system-site-packages"
+      virtualenv: /ansible
+      state: latest
+      name:
+        - pip
+
+  become: true
+
+- import_tasks: timezone.yml

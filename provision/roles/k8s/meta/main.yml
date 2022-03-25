@@ -1,0 +1,7 @@
+---
+dependencies:
+  # k8s needs nodes that's swap are disabled
+  - role: geerlingguy.swap
+    vars:
+      swap_file_state: absent
+    become: true

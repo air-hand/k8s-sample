@@ -1,0 +1,168 @@
+- block:
+  - name: open necessary ports
+    ansible.posix.firewalld:
+      port: "{{ item }}/tcp"
+      permanent: yes
+      immediate: yes # need with *permanent: yes* for apply immediately
+      state: enabled
+    loop: "{{ ports }}"
+  vars:
+    ports:
+      - 443
+      - 6443
+      - 2379
+      - 2380
+      - 10250
+      - 10259
+      - 10257
+  become: true
+
+- name: add key
+  ansible.builtin.apt_key:
+    url: https://packages.cloud.google.com/apt/doc/apt-key.gpg
+    keyring: /usr/share/keyrings/kubernetes-archive-keyring.gpg
+  become: true
+
+- name: add repository
+  ansible.builtin.apt_repository:
+    # there is no kubernetes-bullseye
+    repo: "deb [signed-by=/usr/share/keyrings/kubernetes-archive-keyring.gpg] https://apt.kubernetes.io/ kubernetes-xenial main"
+    state: present
+    filename: kubernetes
+  become: true
+
+- block:
+  - name: install
+    ansible.builtin.apt:
+      state: present
+      update_cache: yes
+      name: "{{ k8s_packages | product([k8s_version + '-00']) | map('join', '=') }}"
+
+  - name: hold
+    ansible.builtin.dpkg_selections:
+      name: "{{ item }}"
+      selection: hold
+    loop: "{{ k8s_packages }}"
+
+  vars:
+    k8s_packages:
+      - kubeadm
+      - kubectl
+      - kubelet
+  become: true
+
+- name: install pip modules
+  ansible.builtin.pip:
+    virtualenv: /ansible
+    state: present
+    name:
+      - kubernetes
+      - PyYAML
+      - jsonpatch
+  become: true
+
+- name: make k8s etc directory
+  ansible.builtin.file:
+    path: /etc/k8s
+    state: directory
+  become: true
+
+- name: deploy config files
+  ansible.builtin.template:
+    src: "{{ item }}"
+    dest: "/etc/k8s/{{ item.split('.')[0:-1] | join('.') }}"
+    backup: no
+  loop:
+    - kubeadm.init.config.yml.j2
+    - kubeadm.join.config.yml.j2
+  become: true
+
+- block:
+  - name: check if a cluster already exists
+    kubernetes.core.k8s_cluster_info:
+    register: k8s_cluster_status
+    failed_when: no
+
+  - name: debug
+    ansible.builtin.debug:
+      var: k8s_cluster_status
+
+  - name: initialize cluster
+    ansible.builtin.shell: |
+      kubeadm init --config=/etc/k8s/kubeadm.init.config.yml
+    when: k8s_cluster_status.apis is not defined
+    become: true
+
+  - name: make directory
+    ansible.builtin.file:
+      state: directory
+      path: "{{ ansible_env.HOME }}/.kube"
+
+  - name: copy kube-config
+    ansible.builtin.copy:
+      src: /etc/kubernetes/admin.conf
+      dest: "{{ ansible_env.HOME }}/.kube/config"
+      owner: "{{ ansible_user }}"
+      group: "{{ ansible_user }}"
+      remote_src: yes
+    become: true
+
+  - name: get cluster information
+    kubernetes.core.k8s_cluster_info:
+    register: k8s_cluster_status
+
+  # I don't want to check that if the token(s) already exists or not
+  # so, I create the token once.
+  - name: create a cluster token
+    shell: |
+      kubeadm token create
+    register: k8s_cluster_token
+  when: k8s_control_plane
+
+- name: identify control plane host
+  ansible.builtin.set_fact:
+    # https://docs.ansible.com/ansible/latest/user_guide/playbooks_filters.html
+    k8s_control_plane_host: "{{ hostvars | to_json | from_json | community.general.json_query(k8s_control_plane_host_query) | first }}"
+  vars:
+    k8s_control_plane_host_query: "* | [] | [?k8s_control_plane == `true`].inventory_hostname"
+
+# TODO: joinしていないかどうかの確認が必要
+
+- name: get joined nodes from control-plane
+  kubernetes.core.k8s_info:
+    kind: Node
+  delegate_to: "{{ k8s_control_plane_host }}"
+  register: k8s_node_list
+
+- name: filter joined nodes by my host name
+  ansible.builtin.set_fact:
+    # https://docs.ansible.com/ansible/latest/user_guide/playbooks_filters.html
+    k8s_node_joined: "{{ k8s_node_list.resources | to_json | from_json | community.general.json_query(k8s_node_joined_query) }}"
+  vars:
+    k8s_node_joined_query: "[*].metadata | [?name == `{{ inventory_hostname }}`]"
+
+- block:
+  - name: get ca cert hash from control plane
+    ansible.builtin.shell: >-
+      openssl x509 -pubkey -in /etc/kubernetes/pki/ca.crt |
+      openssl rsa -pubin -outform der 2>/dev/null |
+      openssl dgst -sha256 -hex |
+      sed 's/^.* //'
+    register: k8s_cluster_ca_cert_hash
+    delegate_to: "{{ k8s_control_plane_host }}"
+
+  - name: get necessary facts from control plane
+    ansible.builtin.set_fact:
+      k8s_cluster_token: "{{ hostvars[k8s_control_plane_host].k8s_cluster_token.stdout }}"
+      k8s_cluster_connection_host: "{{ hostvars[k8s_control_plane_host].k8s_cluster_status.connection.host }}"
+      k8s_cluster_ca_cert_hash: "{{ k8s_cluster_ca_cert_hash.stdout }}"
+
+  - name: join to the cluster
+    ansible.builtin.shell: >-
+      kubeadm join
+      --token={{ k8s_cluster_token }}
+      {{ k8s_cluster_connection_host.split('://') | last }}
+      --discovery-token-ca-cert-hash=sha256:{{ k8s_cluster_ca_cert_hash }}
+    become: true
+
+  when: not k8s_control_plane and not k8s_node_joined
