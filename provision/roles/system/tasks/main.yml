@@ -21,6 +21,7 @@
         - python3-distutils
         - python3-venv
         - python3-firewall
+        - rsync
 
   - name: start firewalld
     ansible.builtin.service:

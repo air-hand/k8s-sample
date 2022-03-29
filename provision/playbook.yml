@@ -1,3 +1,7 @@
+- hosts: 'ansible-controller'
+  roles:
+    - ansible-controller
+
 - hosts: 'all:!ansible-controller'
   roles:
     - system
