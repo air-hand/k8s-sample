@@ -1,0 +1,29 @@
+# Use buildah to build custom images.
+
+# buildah must be installed from kubic to avoid conflict with cri-o.
+# https://github.com/cri-o/cri-o/blob/main/vendor/github.com/containers/buildah/install.md#ubuntu
+
+- name: install buildah
+  ansible.builtin.apt:
+    state: present
+    update_cache: yes
+    name:
+      - buildah
+  become: true
+
+- name: make config directory
+  ansible.builtin.file:
+    state: directory
+    path: "/home/{{ item }}/.config/containers"
+  loop:
+    - vagrant
+
+- name: use vfs storage with non-root user
+  ansible.builtin.copy:
+    dest: "/home/{{ item }}/.config/containers/storage.conf"
+    content: |+
+      # ansible managed
+      [storage]
+      driver = "vfs"
+  loop:
+    - vagrant

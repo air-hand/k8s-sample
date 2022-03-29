@@ -3,11 +3,12 @@
     import_tasks: container.yml
     become: true
 
+  - import_tasks: buildah.yml
+
   - name: install k8s
     import_tasks: k8s.yml
 
   - name: install helm
     import_tasks: helm.yml
-    become: true
   vars:
     ansible_python_interpreter: /ansible/bin/python

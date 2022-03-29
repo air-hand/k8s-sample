@@ -1,0 +1,26 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: shell
+  namespace: default
+  labels:
+    foo: bar
+spec:
+  containers:
+    - name: shell
+      image: localhost/k8s-shell-test:latest
+      command:
+        - "sh"
+        - "-c"
+      args:
+        - |
+          PATH=$PATH:/usr/games
+          while true
+          do
+            sleep ${DELAY}
+            fortune | cowsay
+          done
+      env:
+        - name: "DELAY"
+          value: "5"
+
