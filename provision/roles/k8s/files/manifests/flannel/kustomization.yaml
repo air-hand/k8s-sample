@@ -1,0 +1,12 @@
+resources:
+  - kube-flannel.yml
+configMapGenerator:
+  - name: kube-flannel-cfg
+    behavior: merge
+    namespace: kube-system
+    files:
+      # build by ansible jinja2
+      - net-conf.json
+
+generatorOptions:
+  disableNameSuffixHash: true

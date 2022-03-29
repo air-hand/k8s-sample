@@ -1,0 +1,7 @@
+- name: install requirements
+  ansible.builtin.apt:
+    state: present
+    update_cache: yes
+    name:
+      - rsync
+  become: true

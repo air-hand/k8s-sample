@@ -15,8 +15,10 @@ localAPIEndpoint:
 nodeRegistration:
   criSocket: {{ crio_sock }}
   imagePullPolicy: IfNotPresent
-  name: node
+  name: control-plane-node
   taints: null
+  kubeletExtraArgs:
+    node-ip: {{ ansible_eth1.ipv4.address }}
 ---
 apiServer:
   timeoutForControlPlane: 4m0s
@@ -33,5 +35,6 @@ kind: ClusterConfiguration
 kubernetesVersion: "{{ k8s_version }}"
 networking:
   dnsDomain: cluster.local
-  serviceSubnet: 10.96.0.0/12
+  serviceSubnet: {{ k8s_service_cidr }}
+  podSubnet: {{ k8s_pod_cidr }}
 scheduler: {}

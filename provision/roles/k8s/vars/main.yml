@@ -5,3 +5,6 @@ libcontainers_url: "https://download.opensuse.org/repositories/devel:/kubic:/lib
 crio_url: "https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable:/cri-o:/{{ crio_version }}/{{ ansible_distribution }}_{{ ansible_distribution_major_version }}"
 
 crio_sock: /var/run/crio/crio.sock
+
+k8s_service_cidr: 192.166.0.0/16
+k8s_pod_cidr: 192.167.0.0/16
