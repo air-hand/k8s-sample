@@ -7,3 +7,4 @@
     - system
     - bash
     - k8s
+    - build-images
