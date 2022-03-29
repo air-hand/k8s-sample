@@ -1,0 +1,7 @@
+{# flannel net-conf.json ConfigMap template #}
+{
+    "Network": "{{ k8s_pod_cidr }}",
+    "Backend": {
+        "Type": "vxlan"
+    }
+}

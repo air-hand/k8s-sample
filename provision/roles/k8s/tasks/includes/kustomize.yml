@@ -1,0 +1,22 @@
+- name: copy manifests
+  ansible.posix.synchronize:
+    src: "{{ outer_item.src }}/"
+    dest: "{{ k8s_manifests_dir }}/{{ outer_item.dest }}/"
+
+- name: setup custom resources
+  ansible.builtin.template:
+    src: "{{ outer_item.template_src }}"
+    dest: "{{ k8s_manifests_dir }}/{{ outer_item.dest }}/{{ outer_item.template_dest }}"
+    backup: no
+
+# lookup can't use on remote host...
+- name: get resources with kustomize
+  ansible.builtin.command: >-
+    kubectl kustomize {{ k8s_manifests_dir }}/{{ outer_item.dest }}
+  register: k8s_kustomize_result
+  changed_when: no
+
+- name: install resources
+  kubernetes.core.k8s:
+    state: present
+    resource_definition: "{{ k8s_kustomize_result.stdout }}"
