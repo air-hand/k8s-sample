@@ -15,8 +15,10 @@ localAPIEndpoint:
 nodeRegistration:
   criSocket: {{ crio_sock }}
   imagePullPolicy: IfNotPresent
-  name: node
+  name: control-plane-node
   taints: null
+  kubeletExtraArgs:
+    node-ip: {{ ansible_eth1.ipv4.address }}
 ---
 apiServer:
   timeoutForControlPlane: 4m0s

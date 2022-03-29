@@ -65,27 +65,32 @@
   ansible.builtin.file:
     path: /etc/k8s
     state: directory
-  become: true
-
-- name: deploy config files
-  ansible.builtin.template:
-    src: "{{ item }}"
-    dest: "/etc/k8s/{{ item.split('.')[0:-1] | join('.') }}"
-    backup: no
-  loop:
-    - kubeadm.init.config.yml.j2
-    - kubeadm.join.config.yml.j2
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
   become: true
 
 - block:
+  - name: deploy init config
+    ansible.builtin.template:
+      src: "{{ item }}"
+      dest: "/etc/k8s/{{ item.split('.')[0:-1] | join('.') }}"
+      backup: no
+    loop:
+      - kubeadm.init.config.yml.j2
+    become: true
+
   - name: check if a cluster already exists
     kubernetes.core.k8s_cluster_info:
+    environment:
+      # to avoid kubeadm init failed cause timeout, but complete lately and kubeconfig not copied.
+      K8S_AUTH_KUBECONFIG: /etc/kubernetes/admin.conf
+    become: true
     register: k8s_cluster_status
     failed_when: no
 
-  - name: debug
-    ansible.builtin.debug:
-      var: k8s_cluster_status
+#  - name: debug
+#    ansible.builtin.debug:
+#      var: k8s_cluster_status
 
   - name: initialize cluster
     ansible.builtin.shell: |
@@ -126,8 +131,6 @@
   vars:
     k8s_control_plane_host_query: "* | [] | [?k8s_control_plane == `true`].inventory_hostname"
 
-# TODO: joinしていないかどうかの確認が必要
-
 - name: get joined nodes from control-plane
   kubernetes.core.k8s_info:
     kind: Node
@@ -157,12 +160,42 @@
       k8s_cluster_connection_host: "{{ hostvars[k8s_control_plane_host].k8s_cluster_status.connection.host }}"
       k8s_cluster_ca_cert_hash: "{{ k8s_cluster_ca_cert_hash.stdout }}"
 
+  - name: deploy config for join
+    ansible.builtin.template:
+      src: "{{ item }}"
+      dest: "/etc/k8s/{{ item.split('.')[0:-1] | join('.') }}"
+      backup: no
+    loop:
+      - kubeadm.join.config.yml.j2
+    become: true
+    vars:
+      k8s_join_api_server_endpoint: "{{ k8s_cluster_connection_host.split('://') | last }}"
+      k8s_join_token: "{{ k8s_cluster_token }}"
+      k8s_join_ca_cert_hash: "{{ k8s_cluster_ca_cert_hash }}"
+
   - name: join to the cluster
     ansible.builtin.shell: >-
-      kubeadm join
-      --token={{ k8s_cluster_token }}
-      {{ k8s_cluster_connection_host.split('://') | last }}
-      --discovery-token-ca-cert-hash=sha256:{{ k8s_cluster_ca_cert_hash }}
+      kubeadm join --config=/etc/k8s/kubeadm.join.config.yml
     become: true
 
   when: not k8s_control_plane and not k8s_node_joined
+
+- block:
+  - name: make manifests directory
+    ansible.builtin.file:
+      state: directory
+      path: "{{ k8s_manifests_dir }}"
+
+  - include_tasks: includes/kustomize.yml
+    loop: "{{ k8s_manifests }}"
+    loop_control:
+      loop_var: outer_item
+
+  when: k8s_control_plane
+  vars:
+    k8s_manifests_dir: /etc/k8s/manifests
+    k8s_manifests:
+      - src: files/manifests/flannel
+        dest: flannel
+        template_src: manifests/flannel/net-conf.json.j2
+        template_dest: net-conf.json
