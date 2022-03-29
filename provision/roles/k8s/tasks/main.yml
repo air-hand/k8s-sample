@@ -3,6 +3,8 @@
     import_tasks: container.yml
     become: true
 
+  - import_tasks: buildah.yml
+
   - name: install k8s
     import_tasks: k8s.yml
 
