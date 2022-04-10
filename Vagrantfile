@@ -46,8 +46,6 @@ Vagrant.configure("2") do |config|
           vb.memory = 2048
           vb.cpus = host == 'control-plane' ? 3 : 2
         end
-#        vb.customize ["storagectl", :id, "--name", "SATA Controller", "--hostiocache", "off"]
-#        vb.customize ["setextradata", :id, "VBoxInternal/Devices/ahci/0/LUN0/Config/FlushInterval", "100000"]
       end
       machine.vm.synced_folder ".", "/vagrant", owner: "vagrant", mount_options: ["dmode=700,fmode=600"]
       machine.vm.network "private_network", ip: val['ip']
@@ -58,7 +56,7 @@ Vagrant.configure("2") do |config|
           apt-get update -y
           apt-get install -y python3 python3-distutils python3-venv python3-firewall
           python3 -m venv /ansible --system-site-packages
-          /ansible/bin/pip install -U pip
+          /ansible/bin/pip install -U pip wheel
           /ansible/bin/pip install -r /vagrant/provision/requirements.txt
           chown -R vagrant:vagrant /ansible
           mkdir -p /ansible/roles
