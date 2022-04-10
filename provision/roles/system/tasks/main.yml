@@ -12,6 +12,7 @@
         - apt-file
         - apt-transport-https
         - bash-completion
+        - bridge-utils
         - ca-certificates
         - curl
         - jq
@@ -22,6 +23,7 @@
         - python3-venv
         - python3-firewall
         - rsync
+        - tcpdump
 
   - name: start firewalld
     ansible.builtin.service:
