@@ -7,6 +7,15 @@ configMapGenerator:
     files:
       # build by ansible jinja2
       - net-conf.json
+# https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/troubleshooting-kubeadm/#default-nic-when-using-flannel-as-the-pod-network-in-vagrant
+# https://github.com/kubernetes-sigs/kustomize/issues/3265#issuecomment-732475022
+patches:
+  - patch: |-
+      - op: add
+        path: /spec/template/spec/containers/0/args/-
+        value: --iface=eth1
+    target:
+      kind: DaemonSet
 
 generatorOptions:
   disableNameSuffixHash: true
