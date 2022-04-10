@@ -23,7 +23,8 @@ vm-rebuild: vm-destroy vm-init
 
 .PHONY: vm-restore
 vm-restore:
-	vagrant snapshot restore $(SNAPSHOT_NAME) \
+	vagrant halt \
+	&& vagrant snapshot restore $(SNAPSHOT_NAME) \
 	&& vagrant reload --no-provision \
 	&& vagrant provision \
 	;

@@ -1,0 +1,14 @@
+- name: find build markers
+  ansible.builtin.find:
+    paths: "{{ find_paths }}"
+    patterns: '.buildah_build_marker'
+    hidden: yes
+    recurse: yes
+  register: _found_markers
+  vars:
+    find_paths: /vagrant/src
+
+- name: build images with Makefile
+  community.general.make:
+    chdir: "{{ item.path | dirname }}"
+  loop: "{{ _found_markers.files }}"

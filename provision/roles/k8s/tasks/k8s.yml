@@ -1,22 +1,3 @@
-- block:
-  - name: open necessary ports
-    ansible.posix.firewalld:
-      port: "{{ item }}/tcp"
-      permanent: yes
-      immediate: yes # need with *permanent: yes* for apply immediately
-      state: enabled
-    loop: "{{ ports }}"
-  vars:
-    ports:
-      - 443
-      - 6443
-      - 2379
-      - 2380
-      - 10250
-      - 10259
-      - 10257
-  become: true
-
 - name: add key
   ansible.builtin.apt_key:
     url: https://packages.cloud.google.com/apt/doc/apt-key.gpg
@@ -95,6 +76,8 @@
   - name: initialize cluster
     ansible.builtin.shell: |
       kubeadm init --config=/etc/k8s/kubeadm.init.config.yml
+    async: "{{ (60 * 60)|int }}"
+    poll: 60
     when: k8s_cluster_status.apis is not defined
     become: true
 

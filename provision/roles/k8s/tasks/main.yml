@@ -5,6 +5,8 @@
 
   - import_tasks: buildah.yml
 
+  - import_tasks: firewall.yml
+
   - name: install k8s
     import_tasks: k8s.yml
 

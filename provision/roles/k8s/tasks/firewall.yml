@@ -1,0 +1,45 @@
+- block:
+  - name: open necessary ports
+    ansible.posix.firewalld:
+      port: "{{ item }}/tcp"
+      permanent: yes
+      immediate: yes # need with *permanent: yes* for apply immediately
+      state: enabled
+    loop: "{{ ports }}"
+    vars:
+      ports:
+        - 443
+        - 6443
+        - 2379
+        - 2380
+        - 10250
+        - 10259
+        - 10257
+
+  - name: allow access from interfaces
+    ansible.posix.firewalld:
+      zone: trusted
+      interface: "{{ item }}"
+      state: enabled
+      permanent: yes
+    notify: "restart firewalld" # interface + immediate yes is not allowed
+    loop: "{{ interfaces }}"
+    vars:
+      interfaces:
+        - "eth1"
+
+  - name: allow access from k8s pods
+    ansible.posix.firewalld:
+      zone: trusted
+      source: "{{ item }}"
+      state: enabled
+      permanent: yes
+      immediate: yes
+    loop: "{{ source_list }}"
+    vars:
+      source_list:
+        - "{{ k8s_pod_cidr }}"
+
+  become: true
+
+- meta: flush_handlers
