@@ -95,6 +95,8 @@
   - name: initialize cluster
     ansible.builtin.shell: |
       kubeadm init --config=/etc/k8s/kubeadm.init.config.yml
+    async: "{{ (60 * 60)|int }}"
+    poll: 60
     when: k8s_cluster_status.apis is not defined
     become: true
 
