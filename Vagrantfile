@@ -10,7 +10,28 @@ require 'yaml'
 ANSIBLE_INVENTORY_PATH = 'provision/hosts.yml'
 
 begin
-  conf = YAML.load_file(File.join(File.dirname(__FILE__), ANSIBLE_INVENTORY_PATH))
+  def collect_hosts_recursively(hash_map)
+    hosts = {}
+
+    hash_map.each{|k, v|
+      if !v.is_a? Hash
+        next
+      end
+      if k == 'hosts'
+        v.each{|k2, v2|
+          hosts.store(k2, v2)
+        }
+      else
+        collect_hosts_recursively(v).each{|k2, v2|
+          hosts.store(k2, v2)
+        }
+      end
+    }
+    return hosts
+  end
+
+  inventory = YAML.load_file(File.join(File.dirname(__FILE__), ANSIBLE_INVENTORY_PATH))
+  hosts_from_yaml = collect_hosts_recursively(inventory['all'])
 end
 
 Vagrant.configure("2") do |config|
@@ -31,7 +52,7 @@ Vagrant.configure("2") do |config|
   }
   config.vbguest.no_remote = false
 
-  conf['all']['hosts'].each.with_index do |(host, val), index|
+  hosts_from_yaml.each.with_index do |(host, val), index|
     config.vm.define host do |machine|
       machine.vm.hostname = host
       machine.vm.provider "virtualbox" do |vb|

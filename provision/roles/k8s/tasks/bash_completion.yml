@@ -1,0 +1,6 @@
+- name: enable bash completion for k8s
+  ansible.builtin.lineinfile:
+    line: 'source <(kubectl completion bash)'
+    path: "/home/{{ item }}/.bashrc"
+  loop:
+    - vagrant
