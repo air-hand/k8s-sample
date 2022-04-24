@@ -6,5 +6,8 @@
   roles:
     - system
     - bash
+
+- hosts: k8s_servers
+  roles:
     - k8s
     - build-images
