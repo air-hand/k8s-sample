@@ -1,0 +1,9 @@
+---
+- block:
+  - name: install nfs packages
+    ansible.builtin.apt:
+      state: present
+      update_cache: yes
+      name:
+        - nfs-common
+  become: true
