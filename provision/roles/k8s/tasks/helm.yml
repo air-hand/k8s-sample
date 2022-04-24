@@ -29,6 +29,21 @@
       - name: metrics-server
         url: https://kubernetes-sigs.github.io/metrics-server/
 
+  - name: deploy metrics-server
+    kubernetes.core.helm:
+      name: metrics
+      chart_ref: metrics-server/metrics-server
+      release_namespace: monitoring
+      create_namespace: yes
+      values:
+        # https://github.com/kubernetes-sigs/metrics-server/issues/131#issuecomment-618671827
+        args:
+          - --cert-dir=/tmp
+          - --secure-port=4443
+          - --v=2
+          - --kubelet-insecure-tls
+          - --kubelet-preferred-address-types=InternalIP
+
   when: k8s_control_plane
   environment:
     K8S_AUTH_KUBECONFIG: ~/.kube/config
