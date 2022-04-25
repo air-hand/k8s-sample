@@ -8,3 +8,10 @@ RUN apt-get update -qq \
     ;
 
 WORKDIR /
+
+COPY ./loop.sh /
+
+ENV DELAY 5
+ENV PATH $PATH:/usr/games
+
+CMD [ "bash", "loop.sh" ]
