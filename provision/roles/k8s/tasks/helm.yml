@@ -19,6 +19,13 @@
   become: true
 
 - block:
+  - name: install plugins
+    kubernetes.core.helm_plugin:
+      plugin_path: "{{ item }}"
+      state: present
+    loop:
+      - https://github.com/databus23/helm-diff
+
   - name: add repositories
     kubernetes.core.helm_repository:
       name: "{{ item.name }}"
