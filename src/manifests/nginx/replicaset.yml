@@ -1,0 +1,19 @@
+apiVersion: apps/v1
+kind: ReplicaSet
+metadata:
+  name: repl-sample
+spec:
+  replicas: 3
+  selector:
+    # "matchLabels" should be match with template.metadata.labels for replication.
+    matchLabels:
+      app: web
+  template:
+    metadata:
+      name: nginx
+      labels:
+        app: web
+    spec:
+      containers:
+        - name: nginx
+          image: nginx:1.20.2-alpine
