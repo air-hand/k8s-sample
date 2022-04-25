@@ -1,6 +1,22 @@
-- name: enable bash completion for k8s
-  ansible.builtin.lineinfile:
-    line: 'source <(kubectl completion bash)'
-    path: "/home/{{ item }}/.bashrc"
-  loop:
-    - vagrant
+- block:
+  - name: enable bash completion for kubectl
+    ansible.builtin.lineinfile:
+      line: 'source <(kubectl completion bash)'
+      path: "/home/{{ item }}/.bashrc"
+    loop: "{{ users }}"
+
+  - name: enable kubectl alias on bash
+    ansible.builtin.lineinfile:
+      line: 'alias k=kubectl'
+      path: "/home/{{ item }}/.bashrc"
+    loop: "{{ users }}"
+
+  - name: enable kubectl completion for alias
+    ansible.builtin.lineinfile:
+      line: 'complete -F __start_kubectl k'
+      path: "/home/{{ item }}/.bashrc"
+    loop: "{{ users }}"
+
+  vars:
+    users:
+      - vagrant
