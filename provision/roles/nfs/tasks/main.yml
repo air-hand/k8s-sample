@@ -1,0 +1,6 @@
+---
+- import_tasks: nfs_server.yml
+  when: nfs_server
+
+- import_tasks: nfs_client.yml
+  when: nfs_client

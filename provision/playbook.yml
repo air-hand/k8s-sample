@@ -6,6 +6,7 @@
   roles:
     - system
     - bash
+    - nfs
 
 - hosts: k8s_servers
   roles:

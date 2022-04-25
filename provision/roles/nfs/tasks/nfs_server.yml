@@ -1,0 +1,30 @@
+---
+- name: prepare shared directory
+  ansible.builtin.file:
+    path: /share
+    state: directory
+  become: true
+
+- block:
+  - name: allow access from cidr to nfs server
+    ansible.posix.firewalld:
+      zone: public
+      rich_rule: "rule family=ipv4 service name=\"nfs\" source address=\"{{ item }}\" accept"
+      permanent: yes
+      immediate: yes
+      state: enabled
+    loop: "{{ nfs_clients_cidrs|map('ipaddr', 'network/prefix') }}"
+    become: true
+
+  - name: share with nfs
+    ansible.builtin.import_role:
+      name: geerlingguy.nfs
+    vars:
+      nfs_exports_option: "(rw,sync,no_root_squash,no_subtree_check,insecure)"
+      nfs_exports:
+        - "/share {{ nfs_clients_cidrs|map('ipaddr', 'network/prefix')|map('regex_replace', '$', nfs_exports_option)|join(' ') }}"
+    become: true
+  vars:
+    nfs_clients_cidrs:
+      - "192.167.0.0/16" # TODO: share k8s/vars/k8s_pod_cidr
+      - "{{ ansible_eth1.ipv4.network }}/{{ ansible_eth1.ipv4.netmask }}"
