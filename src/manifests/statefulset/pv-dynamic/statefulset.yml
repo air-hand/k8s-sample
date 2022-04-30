@@ -1,0 +1,46 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: statefulset-dynamic-sample
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: front
+  serviceName: statefulset-dynamic-sample-svc
+  template:
+    metadata:
+      name: nginx
+      labels:
+        app: front
+    spec:
+      containers:
+        - name: nginx
+          image: nginx:1.21.6-alpine
+          volumeMounts:
+            - mountPath: /mnt
+              name: statefulset-dynamic-sample-storage
+  volumeClaimTemplates:
+    - metadata:
+        name: statefulset-dynamic-sample-storage
+      spec:
+        storageClassName: nfs-client
+        accessModes:
+          - ReadWriteMany
+        resources:
+          requests:
+            storage: 100Mi
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: statefulset-dynamic-sample-svc
+spec:
+  clusterIP: None
+  selector:
+    app: front
+  ports:
+    - port: 80
+      targetPort: 80
+      protocol: TCP
