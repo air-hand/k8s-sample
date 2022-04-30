@@ -1,0 +1,52 @@
+# WARN: Do not input PV and volumeClaimTemplates in one file.
+# https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#stable-storage
+# *Note that, the PersistentVolumes associated with the Pods' PersistentVolume Claims are not deleted when the Pods, or StatefulSet are deleted. This must be done manually.*
+# The above sentence means "kubectl delete pod or statefulset" does not delete pvc (nor pv).
+# Therefore, 'kubectl delete -f thisfile' command will not complete because it means to delete only pv, even though pvc exists.
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: statefulset-sample
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: front
+  serviceName: statefulset-sample-service
+  template:
+    metadata:
+      name: nginx
+      labels:
+        app: front
+    spec:
+      containers:
+        - name: nginx
+          image: nginx:1.21.6-alpine
+          volumeMounts:
+            - mountPath: /mnt
+              name: statefulset-sample-storage
+  volumeClaimTemplates:
+    - metadata:
+        name: statefulset-sample-storage
+      spec:
+        storageClassName: slow
+        accessModes:
+          - ReadWriteMany
+        resources:
+          requests:
+            storage: 1Gi
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: statefulset-sample-service
+  # dns pod.svc ex) statefulset-sample-0.statefulset-sample-service
+spec:
+  clusterIP: None
+  selector:
+    app: front
+  ports:
+    - port: 80
+      targetPort: 80
+      protocol: TCP
